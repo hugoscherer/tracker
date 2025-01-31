@@ -93,20 +93,20 @@ def visualize_consumption():
             }}
         </style>
         <div class="podium-container">
-            <div class="podium-box bronze">
-                <div class="podium-user">{top_users.iloc[2]['Utilisateur']}</div>
-                <div class="podium-score">{top_users.iloc[2]['Alcool en grammes']:.2f} g</div>
-                <div class="podium-rank">🥉</div>
+            <div class="podium-box silver">
+                <div class="podium-user">{top_users.iloc[1]['Utilisateur']}</div>
+                <div class="podium-score">{top_users.iloc[1]['Alcool en grammes']:.2f} g</div>
+                <div class="podium-rank">🥈</div>
             </div>
             <div class="podium-box gold">
                 <div class="podium-user">{top_users.iloc[0]['Utilisateur']}</div>
                 <div class="podium-score">{top_users.iloc[0]['Alcool en grammes']:.2f} g</div>
                 <div class="podium-rank">🥇</div>
             </div>
-            <div class="podium-box silver">
-                <div class="podium-user">{top_users.iloc[1]['Utilisateur']}</div>
-                <div class="podium-score">{top_users.iloc[1]['Alcool en grammes']:.2f} g</div>
-                <div class="podium-rank">🥈</div>
+            <div class=podium-box bronze">
+                <div class="podium-user">{top_users.iloc[2]['Utilisateur']}</div>
+                <div class="podium-score">{top_users.iloc[2]['Alcool en grammes']:.2f} g</div>
+                <div class="podium-rank">🥉</div>
             </div>
         </div>
         """

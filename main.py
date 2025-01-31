@@ -21,7 +21,7 @@ def main():
     st.sidebar.title("Menu")
     page = st.sidebar.radio("Navigation", ["Ajouter une consommation", "Ajouter un user", "Visualisation"])
     
-    if page == "Accueil":
+    if page == "Ajouter un user":
         st.title("Bienvenue sur le tracker de consommation d'alcool")
         prenom = st.text_input("Entrez votre prénom pour créer un compte :")
         if st.button("Ajouter") and prenom:
