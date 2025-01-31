@@ -103,7 +103,7 @@ def visualize_consumption():
                 <div class="podium-score">{top_users.iloc[0]['Alcool en grammes']:.2f} g</div>
                 <div class="podium-rank">🥇</div>
             </div>
-            <div class=podium-box bronze">
+            <div class="podium-box bronze">
                 <div class="podium-user">{top_users.iloc[2]['Utilisateur']}</div>
                 <div class="podium-score">{top_users.iloc[2]['Alcool en grammes']:.2f} g</div>
                 <div class="podium-rank">🥉</div>
@@ -128,18 +128,23 @@ def visualize_consumption():
     st.metric("💪 Alcool total (g)", f"{total_alcool_grams:.2f} g")
     st.metric("🧴 Volume total consommé", f"{total_volume_litres:.2f} L")
     
-    # Évolution de la consommation cumulée
-    df["Mois"] = df["Date"].dt.strftime('%Y-%m')
-    df = df.sort_values("Date")
-    df["Cumul Alcool"] = df["Alcool en grammes"].cumsum()
-    
-    chart_trend = alt.Chart(df).mark_line(point=True).encode(
+    # Regroupement par jour pour avoir un point de donnée par jour
+    df_daily = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
+
+    # Ajout d'une colonne de cumul par utilisateur
+    df_daily["Cumul Alcool"] = df_daily.groupby("Utilisateur")["Alcool en grammes"].cumsum()
+
+    # Création du graphique Altair
+    chart_trend = alt.Chart(df_daily).mark_line(point=True).encode(
         x=alt.X("Date:T", title="Date"),
         y=alt.Y("Cumul Alcool", title="Alcool en grammes cumulé"),
         color=alt.Color("Utilisateur", scale=alt.Scale(scheme='set2')),
         tooltip=["Date", "Utilisateur", "Cumul Alcool"]
-    ).properties(title="📈 Évolution cumulée de la consommation")
+    ).properties(title="📈 Évolution cumulée de la consommation par jour")
+
+    # Affichage dans Streamlit
     st.altair_chart(chart_trend, use_container_width=True)
+
     
     if selected_user == "Tous":
         
