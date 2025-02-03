@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from conso import *
 from visualisations import *
+from supp_conso import *
 
 # Définition des fichiers CSV
 USERS_CSV = "users.csv"
@@ -15,12 +16,10 @@ if not os.path.exists(ALCOHOL_DATA_FOLDER):
     os.makedirs(ALCOHOL_DATA_FOLDER)
 
 
-
-# Définition des pages
 def main():
     st.sidebar.title("Menu")
-    page = st.sidebar.radio("Navigation", ["Ajouter une consommation", "Ajouter un user", "Visualisation"])
-    
+    page = st.sidebar.radio("Navigation", ["Ajouter une consommation", "Ajouter un user", "Visualisation", "Gérer les consommations"])  # Nouvelle page ajoutée
+
     if page == "Ajouter un user":
         st.title("Bienvenue sur le tracker de consommation d'alcool")
         prenom = st.text_input("Entrez votre prénom pour créer un compte :")
@@ -29,7 +28,7 @@ def main():
                 st.success(f"Utilisateur {prenom} ajouté avec succès !")
             else:
                 st.warning("Cet utilisateur existe déjà.")
-    
+
     elif page == "Ajouter une consommation":
         st.title("Ajouter une consommation")
         initialize_files()
@@ -41,9 +40,11 @@ def main():
         else:
             st.warning("Aucun utilisateur trouvé. Veuillez ajouter un utilisateur d'abord.")
 
-    
     elif page == "Visualisation":
         visualize_consumption()
+
+    elif page == "Gérer les consommations":  # Nouvelle page ici
+        manage_consumptions()
 
 if __name__ == "__main__":
     main()
