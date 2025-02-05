@@ -205,7 +205,7 @@ def visualize_consumption():
             .encode(
                 x=alt.X("Boisson:N", sort='-y', title="Boisson"),  # Axe des X = catégories (vertical)
                 y=alt.Y(f"sum({metric}):Q", title=f"Total consommé ({unit})"),  # Axe des Y = valeurs
-                color=alt.Color(f"{color_field}:N", scale=alt.Scale(scheme=color_scheme), legend=None),
+                color=alt.Color(f"{color_field}:N", scale=alt.Scale(scheme=color_scheme)),
                 tooltip=["Boisson", color_field, alt.Tooltip(f"sum({metric}):Q", title=f"Total ({unit})")]
             )
             .properties(
