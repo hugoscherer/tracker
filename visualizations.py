@@ -1,33 +1,19 @@
+import streamlit.components.v1 as components
 import streamlit as st
 import pandas as pd
-import os
 import altair as alt
-import streamlit.components.v1 as components
+from google_sheets_utils import authenticate_gsheets, get_worksheet
+from users import load_users
+from gspread_dataframe import get_as_dataframe
 
+SHEET = authenticate_gsheets()
 
-# Définition des fichiers CSV
-ALCOHOL_FOLDER = "alcohol_data"
-USERS_CSV = "users.csv"
-
-# Fonction pour charger les utilisateurs
-def load_users():
-    return pd.read_csv(USERS_CSV)["prenom"].tolist()
-
-# Fonction pour charger les consommations d'un utilisateur
-def load_user_data(user_file):
-    if os.path.exists(user_file):
-        df = pd.read_csv(user_file)
-        df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
-        return df
-    return pd.DataFrame(columns=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
-
-# Fonction pour charger toutes les consommations
+# Charger toutes les consommations
 def load_all_data():
     users = load_users()
     all_data = []
     for user in users:
-        user_file = os.path.join(ALCOHOL_FOLDER, f"{user}.csv")
-        df = load_user_data(user_file)
+        df = get_as_dataframe(get_worksheet(SHEET, user)).dropna(how='all')
         df["Utilisateur"] = user
         all_data.append(df)
     return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
@@ -185,8 +171,6 @@ def visualize_consumption():
     ).properties(title="🍺 Top 5 des bières consommées en pintes")
     st.altair_chart(chart_beers, use_container_width=True)
 
-    import random
-
     if selected_user == "Tous":
         df_hard = df[df["Type"] == "🥃 Hard"].copy()
     else:
@@ -198,11 +182,6 @@ def visualize_consumption():
     else:
         top_hard = df_hard.groupby("Boisson")["Volume en litres"].sum().nlargest(5).reset_index()
 
-    # Mélanger l'ordre des boissons pour varier les couleurs attribuées
-    boissons = top_hard["Boisson"].tolist()
-    random.shuffle(boissons)
-    top_hard["Boisson"] = boissons
-
     chart_hard = alt.Chart(top_hard).mark_bar().encode(
         x=alt.X("Boisson", title="Alcool fort"),
         y=alt.Y("Volume en litres", title="Volume total consommé (L)"),
@@ -210,9 +189,6 @@ def visualize_consumption():
         tooltip=["Boisson", "Volume en litres"]
     ).properties(title="🥃 Top 5 des alcools forts consommés")
     st.altair_chart(chart_hard, use_container_width=True)
-
-
-
 
 # Exécution
 if __name__ == "__main__":
