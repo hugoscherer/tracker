@@ -5,7 +5,7 @@ from visualizations import *
 
 def main():
     st.sidebar.title("Menu")
-    page = st.sidebar.radio("Navigation", ["Ajouter un utilisateur", "Ajouter une consommation", "Visualisation des consommations"])
+    page = st.sidebar.radio("Navigation", ["Ajouter une consommation", "Ajouter un utilisateur", "Visualisation des consommations", "Gestion des consommations"])
 
     if page == "Ajouter un utilisateur":
         st.title("Créer un compte utilisateur")
@@ -27,6 +27,10 @@ def main():
 
     elif page == "Visualisation des consommations":
         visualize_consumption()
+    
+    elif page == "Gestion des consommations":
+        manage_consumptions()
+
 
 if __name__ == "__main__":
     main()

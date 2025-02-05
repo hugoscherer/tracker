@@ -3,6 +3,8 @@ import pandas as pd
 from google_sheets_utils import authenticate_gsheets, get_worksheet
 from datetime import datetime
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from users import *
+import time
 
 # Authentification Google Sheets
 SHEET = authenticate_gsheets()
@@ -101,8 +103,7 @@ def add_consumption(user):
     alcool_grams = alcool_pur_volume * 1000 * 0.8  # Conversion en grammes
 
     # Affichage des résultats (facultatif pour vérifier les calculs)
-    st.write(f"Total Volume: {total_volume:.2f} L")
-    st.write(f"Alcool pur: {alcool_pur_volume:.2f} L")
+    st.write(f"Total Volume Alcool: {total_volume:.2f} L")
     st.write(f"Alcool en grammes: {alcool_grams:.2f} g")
 
 
@@ -118,3 +119,71 @@ def add_consumption(user):
         set_with_dataframe(worksheet, updated_df)
 
         st.success(f"✅ {quantite} x {taille} de {boisson} ajouté ({alcool_grams:.2f} g d'alcool, {total_volume:.2f} L) !")
+
+def manage_consumptions():
+    st.title("🗑️ Gestion des consommations")
+
+    users = load_users()
+    if not users:
+        st.warning("Ajoutez un utilisateur avant de gérer les consommations.")
+        return
+
+    selected_user = st.selectbox("👤 Sélectionnez un utilisateur", users)
+
+    # Charger les consommations de l'utilisateur
+    worksheet = get_worksheet(SHEET, selected_user)
+    df = get_as_dataframe(worksheet).dropna(how='all')
+
+    if df.empty:
+        st.info(f"Aucune consommation enregistrée pour {selected_user}.")
+        return
+
+    # Ajout d'une colonne pour identifier chaque ligne unique
+    df["ID"] = df.index  # Identifiant unique basé sur l'index
+
+    # Affichage des consommations avec un bouton de suppression
+    st.subheader(f"📋 Consommations de {selected_user}")
+    for index, row in df.iterrows():
+        col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 2])
+
+        with col1:
+            if st.button("❌", key=f"delete_{index}"):
+                delete_consumption(selected_user, index)
+
+        with col2:
+            st.write(f"📅 {row['Date']}")
+
+        with col3:
+            st.write(f"{row['Type']} - {row['Boisson']}")
+
+        with col4:
+            st.write(f"🍷 {row['Taille']} x{int(row['Quantité'])}")
+
+        with col5:
+            st.write(f"💪 {row['Alcool en grammes']:.1f} g")
+
+def delete_consumption(user, row_index):
+    """ Supprime une consommation spécifique d'un utilisateur dans Google Sheets """
+    worksheet = get_worksheet(SHEET, user)
+    if worksheet is None:
+        st.error(f"Erreur lors de l'accès à la feuille Google Sheets de {user}.")
+        return
+
+    df = get_as_dataframe(worksheet).dropna(how='all')
+
+    if row_index in df.index:
+        df = df.drop(row_index).reset_index(drop=True)  # Supprime la ligne et réindexe
+
+        # ✅ Solution robuste : supprimer tout le contenu avant d'écrire les nouvelles données
+        worksheet.clear()  # Efface tout le contenu de la feuille
+        set_with_dataframe(worksheet, df)  # Réécrit les données mises à jour
+
+        st.success("✅ Consommation supprimée avec succès !")
+
+        # Attendre un peu pour éviter que la ligne ne réapparaisse immédiatement
+        time.sleep(1)
+
+        # Recharger la page pour refléter les changements
+        st.rerun()
+    else:
+        st.warning("⚠️ Impossible de trouver cette consommation.")

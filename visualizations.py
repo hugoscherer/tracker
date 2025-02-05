@@ -31,6 +31,12 @@ def visualize_consumption():
     users = load_users()
     selected_user = st.selectbox("👤 Sélectionnez un utilisateur ou 'Tous'", ["Tous"] + users)
 
+    # Filtrer les données en fonction de la sélection
+    if selected_user != "Tous":
+        df_filtered = df[df["Utilisateur"] == selected_user]
+    else:
+        df_filtered = df.copy()
+
     # Classement des utilisateurs en fonction de la consommation totale d'alcool
     top_users = df.groupby("Utilisateur")["Alcool en grammes"].sum().reset_index()
     top_users = top_users.sort_values(by="Alcool en grammes", ascending=False).reset_index(drop=True)
@@ -102,18 +108,29 @@ def visualize_consumption():
         df = df[df["Utilisateur"] == selected_user]
     
     # Indicateurs clés
-    total_pintes = df[df["Taille"].str.contains("Pinte", na=False)]["Quantité"].sum()
+    df_biere = df[df["Type"] == "🍺 Bière"]
+    volume_total_biere = df_biere["Volume en litres"].sum()
+    total_pintes = volume_total_biere / 0.5
     total_vin = df[df["Boisson"].str.contains("Rouge|Blanc|Rosé", na=False)]["Volume en litres"].sum() / 0.75
     total_hard = df[df["Type"].str.contains("Hard", na=False)]["Volume en litres"].sum() / 0.7
-    total_alcool_grams = df["Alcool en grammes"].sum()
+    total_alcool_grams = df["Alcool en grammes"].sum() / 1000
     total_volume_litres = df["Volume en litres"].sum()
     
-    st.metric("🍺 Pintes bues", int(total_pintes))
-    st.metric("🍷 Bouteilles de vin bues", int(total_vin))
-    st.metric("🥃 Bouteilles de hard bues", int(total_hard))
-    st.metric("💪 Alcool total (g)", f"{total_alcool_grams:.2f} g")
-    st.metric("🧴 Volume total consommé", f"{total_volume_litres:.2f} L")
-    
+    # Création de trois colonnes côte à côte
+    col1, col2, col3 = st.columns(3)
+
+    # Affichage des métriques dans chaque colonne
+    with col1:
+        st.metric("🍺 Pintes bues", int(total_pintes))
+        st.metric("💪 Alcool total (g)", f"{total_alcool_grams:.2f} kg")
+
+    with col2:
+        st.metric("🍷 Bouteilles de vin bues", int(total_vin))
+        st.metric("🧴 Volume total consommé", f"{total_volume_litres:.2f} L")
+
+    with col3:
+        st.metric("🥃 Bouteilles de hard bues", int(total_hard))
+        
     # Regroupement par jour pour avoir un point de donnée par jour
     df_daily = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
 
@@ -137,7 +154,7 @@ def visualize_consumption():
         chart_comparison = alt.Chart(df).mark_bar().encode(
             x=alt.X("Utilisateur", title="Utilisateur", sort="-y"),
             y=alt.Y("sum(Alcool en grammes)", title="Alcool consommé en grammes"),
-            color=alt.Color("Type", scale=alt.Scale(scheme='tableau10')),
+            color=alt.Color("Type", scale=alt.Scale(scheme='pastel1'), legend=None),
             tooltip=["Utilisateur", "Type", "sum(Alcool en grammes)"]
         ).properties(title="🏆 Classement des utilisateurs")
         st.altair_chart(chart_comparison, use_container_width=True)
@@ -145,51 +162,116 @@ def visualize_consumption():
         chart_type = alt.Chart(df).mark_bar().encode(
             x=alt.X("Type", title="Type d'alcool"),
             y=alt.Y("sum(Alcool en grammes)", title="Alcool en grammes"),
-            color=alt.Color("Type", scale=alt.Scale(scheme='tableau10')),
+            color=alt.Color("Type", scale=alt.Scale(scheme='pastel2'), legend=None),
             tooltip=["Type", "sum(Alcool en grammes)"]
         ).properties(title="📌 Répartition des types d'alcool")
         st.altair_chart(chart_type, use_container_width=True)
     
-    if selected_user == "Tous":
-        df_beers = df[df["Type"] == "🍺 Bière"].copy()
+    def plot_top_consumption(df, drink_type, metric, conversion=1, unit="", selected_user="Tous"):
+        # Filtrage des données par type de boisson
+        df_filtered = df[df["Type"] == drink_type].copy()
+
+        # Filtrage par utilisateur si nécessaire
+        if selected_user != "Tous":
+            df_filtered = df_filtered[df_filtered["Utilisateur"] == selected_user]
+
+        # Conversion du volume si nécessaire (par ex : litres -> pintes)
+        df_filtered[metric] = df_filtered["Volume en litres"] / conversion if conversion != 1 else df_filtered["Volume en litres"]
+
+        # Agrégation des données
+        group_cols = ["Utilisateur", "Boisson"] if selected_user == "Tous" else ["Boisson"]
+        top_items = (
+            df_filtered.groupby(group_cols, as_index=False)[metric]
+            .sum()
+            .sort_values(by=metric, ascending=False)
+        )
+
+        # Top 5 des consommations
+        top_5_items = (
+            top_items.groupby("Boisson", as_index=False)[metric]
+            .sum()
+            .sort_values(by=metric, ascending=False)
+            .head(5)
+        )
+
+        # Paramètres des couleurs
+        color_field = "Utilisateur" if selected_user == "Tous" else "Boisson"
+        color_scheme = "pastel1" if selected_user == "Tous" else "pastel2"
+
+        # Création du bar plot vertical
+        plot = (
+            alt.Chart(df_filtered[df_filtered["Boisson"].isin(top_5_items["Boisson"])])
+            .mark_bar()
+            .encode(
+                x=alt.X("Boisson:N", sort='-y', title="Boisson"),  # Axe des X = catégories (vertical)
+                y=alt.Y(f"sum({metric}):Q", title=f"Total consommé ({unit})"),  # Axe des Y = valeurs
+                color=alt.Color(f"{color_field}:N", scale=alt.Scale(scheme=color_scheme), legend=None),
+                tooltip=["Boisson", color_field, alt.Tooltip(f"sum({metric}):Q", title=f"Total ({unit})")]
+            )
+            .properties(
+                title=f"Top 5 des {drink_type}s consommés - {selected_user}",
+                width=500,
+                height=400
+            )
+        )
+
+        # Affichage du graphique
+        st.altair_chart(plot, use_container_width=True)
+
+    # 🔍 Plots des bières (en pintes) et des alcools forts (en litres)
+    plot_top_consumption(df, drink_type="🍺 Bière", metric="Pintes", conversion=0.5, unit="pintes", selected_user=selected_user)
+    plot_top_consumption(df, drink_type="🥃 Hard", metric="Volume en litres", unit="L", selected_user=selected_user)
+
+    # Filtrer les données en fonction de la sélection
+    if selected_user != "Tous":
+        df_filtered = df[df["Utilisateur"] == selected_user]
+
+        # Regrouper les données par date et sommer la quantité d'alcool en grammes
+        df_daily_alcool = df_filtered.groupby("Date", as_index=False)["Alcool en grammes"].sum()
+
+        # Bar plot avec des couleurs pastel vert → jaune → rouge
+        bar_plot = alt.Chart(df_daily_alcool).mark_bar().encode(
+            x=alt.X("Date:T", title="Date", axis=alt.Axis(format='%b %d', labelAngle=-90)),
+            y=alt.Y("Alcool en grammes:Q", title="Alcool consommé (g)"),
+            color=alt.Color(
+                "Alcool en grammes:Q",
+                scale=alt.Scale(
+                    domain=[0, df_daily_alcool["Alcool en grammes"].max()],
+                    range=["#C8E6C9", "#FFF9C4", "#FFCDD2"]  # Vert pastel → Jaune pastel → Rouge pastel
+                ),
+                legend=None
+            ),
+            tooltip=["Date", alt.Tooltip("Alcool en grammes:Q", title="Alcool consommé (g)")]
+        ).properties(
+            title=f"📊 Quantité d'alcool consommée par jour - {selected_user}",
+            width=700,
+            height=400
+        )
+
     else:
-        df_beers = df[(df["Type"] == "🍺 Bière") & (df["Utilisateur"] == selected_user)].copy()
+        df_filtered = df.copy()
 
-    df_beers["Pintes"] = (df_beers["Volume en litres"] / 0.5).astype(int)  # Conversion en unités de pintes
+        # Regrouper par date et utilisateur pour la vue "Tous"
+        df_daily_alcool = df_filtered.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
 
-    if selected_user == "Tous":
-        top_beers = df_beers.groupby(["Utilisateur", "Boisson"])["Pintes"].sum().reset_index()
-        top_beers = top_beers.groupby("Utilisateur").apply(lambda x: x.nlargest(5, "Pintes")).reset_index(drop=True)
-    else:
-        top_beers = df_beers.groupby("Boisson")["Pintes"].sum().nlargest(5).reset_index()
+        # Bar plot avec des couleurs pastel vert → jaune → rouge
+        bar_plot = alt.Chart(df_daily_alcool).mark_bar().encode(
+            x=alt.X("Date:T", title="Date", axis=alt.Axis(format='%b %d', labelAngle=-90)),
+            y=alt.Y("Alcool en grammes:Q", title="Alcool consommé (g)"),
+            color=alt.Color(
+                "Alcool en grammes:Q",
+                scale=alt.Scale(
+                    domain=[0, df_daily_alcool["Alcool en grammes"].max()],
+                    range=["#C8E6C9", "#FFF9C4", "#FFCDD2"]  # Vert pastel → Jaune pastel → Rouge pastel
+                ),
+                legend=None
+            ),
+            tooltip=["Date", "Utilisateur", alt.Tooltip("Alcool en grammes:Q", title="Alcool consommé (g)")]
+        ).properties(
+            title="📊 Quantité d'alcool consommée par jour (Tous les utilisateurs)",
+            width=700,
+            height=400
+        )
 
-    chart_beers = alt.Chart(top_beers).mark_bar().encode(
-        x=alt.X("Boisson", title="Bière"),
-        y=alt.Y("Pintes", title="Nombre de pintes"),
-        color=alt.Color("Boisson", scale=alt.Scale(scheme='set3')),
-        tooltip=["Boisson", "Pintes"]
-    ).properties(title="🍺 Top 5 des bières consommées en pintes")
-    st.altair_chart(chart_beers, use_container_width=True)
-
-    if selected_user == "Tous":
-        df_hard = df[df["Type"] == "🥃 Hard"].copy()
-    else:
-        df_hard = df[(df["Type"] == "🥃 Hard") & (df["Utilisateur"] == selected_user)].copy()
-
-    if selected_user == "Tous":
-        top_hard = df_hard.groupby(["Utilisateur", "Boisson"])["Volume en litres"].sum().reset_index()
-        top_hard = top_hard.groupby("Utilisateur").apply(lambda x: x.nlargest(5, "Volume en litres")).reset_index(drop=True)
-    else:
-        top_hard = df_hard.groupby("Boisson")["Volume en litres"].sum().nlargest(5).reset_index()
-
-    chart_hard = alt.Chart(top_hard).mark_bar().encode(
-        x=alt.X("Boisson", title="Alcool fort"),
-        y=alt.Y("Volume en litres", title="Volume total consommé (L)"),
-        color=alt.Color("Boisson", scale=alt.Scale(scheme="tableau10")),  # Garde les mêmes couleurs mais les mélange
-        tooltip=["Boisson", "Volume en litres"]
-    ).properties(title="🥃 Top 5 des alcools forts consommés")
-    st.altair_chart(chart_hard, use_container_width=True)
-
-# Exécution
-if __name__ == "__main__":
-    visualize_consumption()
+    # Affichage du graphique
+    st.altair_chart(bar_plot, use_container_width=True)
