@@ -122,7 +122,7 @@ def visualize_consumption():
     # Affichage des métriques dans chaque colonne
     with col1:
         st.metric("🍺 Pintes bues", int(total_pintes))
-        st.metric("💪 Alcool total (g)", f"{total_alcool_grams:.2f} kg")
+        st.metric("💪 Alcool total (kg)", f"{total_alcool_grams:.2f} kg")
 
     with col2:
         st.metric("🍷 Bouteilles de vin bues", int(total_vin))
