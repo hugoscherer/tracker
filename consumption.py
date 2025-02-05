@@ -141,6 +141,9 @@ def manage_consumptions():
     # Ajout d'une colonne pour identifier chaque ligne unique
     df["ID"] = df.index  # Identifiant unique basé sur l'index
 
+    # 🔄 Inverser l'ordre des données pour afficher les plus récentes en premier
+    df = df.iloc[::-1].reset_index(drop=True)
+
     # Affichage des consommations avec un bouton de suppression
     st.subheader(f"📋 Consommations de {selected_user}")
     for index, row in df.iterrows():
