@@ -159,7 +159,7 @@ def visualize_consumption():
         st.altair_chart(chart_comparison, use_container_width=True)
     else:
         chart_type = alt.Chart(df).mark_bar().encode(
-            x=alt.X("Type", title="Type d'alcool"),
+            x=alt.X("Type", title="Type d'alcool", sort="-y"),
             y=alt.Y("sum(Alcool en grammes)", title="Alcool en grammes"),
             color=alt.Color("Type", scale=alt.Scale(scheme='pastel2'), legend=None),
             tooltip=["Type", "sum(Alcool en grammes)"]
