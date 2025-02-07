@@ -170,7 +170,7 @@ def manage_consumptions():
         col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
 
         with col1:
-            if st.button("❌", key=f"delete_{index}"):
+            if st.button("❌ Supprimer", key=f"delete_{index}"):
                 delete_consumption(selected_user, index)
                 st.rerun()
 
