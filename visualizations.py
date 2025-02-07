@@ -154,7 +154,7 @@ def visualize_consumption():
         chart_comparison = alt.Chart(df).mark_bar().encode(
             x=alt.X("Utilisateur", title="Utilisateur", sort="-y"),
             y=alt.Y("sum(Alcool en grammes)", title="Alcool consommé en grammes"),
-            color=alt.Color("Type", scale=alt.Scale(scheme='pastel1'), legend=None),
+            color=alt.Color("Type", scale=alt.Scale(scheme='pastel1')),
             tooltip=["Utilisateur", "Type", "sum(Alcool en grammes)"]
         ).properties(title="🏆 Classement des utilisateurs")
         st.altair_chart(chart_comparison, use_container_width=True)
@@ -268,7 +268,7 @@ def visualize_consumption():
             ),
             tooltip=["Date", "Utilisateur", alt.Tooltip("Alcool en grammes:Q", title="Alcool consommé (g)")]
         ).properties(
-            title="📊 Quantité d'alcool consommée par jour (Tous les utilisateurs)",
+            title="📊 Quantité d'alcool consommée par jour - Tous",
             width=700,
             height=400
         )
