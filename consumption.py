@@ -43,13 +43,14 @@ DRINKS_DATA = {
         "Whisky": 40.0,
         "Tequila": 38.0,
         "Gin": 37.5,
+        "Pastis": 45.0,
         "Autre": 40.0
     },
     "🍾 Autres": {
         "Champagne": 12.0,
         "Cidre": 4.5,
-        "Pastis": 45.0,
-        "Autre": 20.0
+        "Liqueur": 20.0,
+        "Autre": 10.0
     }
 }
 
@@ -59,7 +60,7 @@ GLASS_SIZES = {
         "Pinte (50cl)": 500,
         "Bouteille (33cl)": 330,
         "Demi (25cl)": 250,
-        "Autre": None  # Permet de déclencher la saisie manuelle
+        "Autre": None
     },
     "🍷 Vin": {
         "Verre de vin (15cl)": 150,
@@ -70,13 +71,13 @@ GLASS_SIZES = {
         "Shot (3cl)": 30,
         "Verre soirée (20cl)": 60,
         "Cocktail (25cl)": 40,
+        "Ricard (2cl)": 20,
         "Autre": None
     },
     "🍾 Autres": {
         "Coupe champagne (15 cl)": 150,
+        "Verre de cidre (20 cl)": 200,
         "Bouteille (75cl)": 750,
-        "Verre (20 cl)": 200,
-        "Ricard (2 cl)": 20,
         "Autre": None
     }
 }
@@ -141,16 +142,9 @@ def add_consumption(user):
         st.success(f"✅ {quantite} x {taille} de {boisson} ajouté ({alcool_grams:.2f} g d'alcool, {total_volume:.2f} L) !")
         st.rerun()  # 🔄 Recharge la page pour afficher les nouvelles données
 
-def manage_consumptions():
+def manage_consumptions(selected_user):
     """ Gère les consommations enregistrées et permet la suppression """
     st.title("🗑️ Gestion des consommations")
-
-    users = load_users()
-    if not users:
-        st.warning("Ajoutez un utilisateur avant de gérer les consommations.")
-        return
-
-    selected_user = st.selectbox("👤 Sélectionnez un utilisateur", users)
 
     # Charger les consommations de l'utilisateur avec cache
     df = load_consumptions(selected_user)

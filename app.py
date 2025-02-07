@@ -17,7 +17,6 @@ def main():
                 st.warning("Cet utilisateur existe déjà.")
 
     elif page == "Ajouter une consommation":
-        st.title("Ajouter une consommation")
         users = load_users()
         if users:
             selected_user = st.selectbox("Sélectionnez un utilisateur", users)
@@ -29,7 +28,12 @@ def main():
         visualize_consumption()
     
     elif page == "Gestion des consommations":
-        manage_consumptions()
+        users = load_users()
+        if users:
+            selected_user = st.selectbox("Sélectionnez un utilisateur", users)
+            manage_consumptions(selected_user)
+        else:
+            st.warning("Ajoutez un utilisateur avant de pouvoir enregistrer une consommation.")
 
 
 if __name__ == "__main__":
