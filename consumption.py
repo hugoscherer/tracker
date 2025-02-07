@@ -164,11 +164,10 @@ def manage_consumptions():
 
     # Affichage sous forme de tableau simple
     st.subheader(f"📋 Consommations de {selected_user}")
-    st.dataframe(df)
 
     # Ajout des boutons de suppression sous forme de colonnes
     for index, row in df.iterrows():
-        col1, col2, col3, col4, col5, col6 = st.columns([1, 2, 2, 2, 2, 1])
+        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
 
         with col1:
             if st.button("❌", key=f"delete_{index}"):
