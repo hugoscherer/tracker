@@ -139,7 +139,7 @@ def visualize_consumption():
 
     # 📈 Création du graphique Altair
     chart_trend = alt.Chart(df_daily).mark_line(point=True).encode(
-        x=alt.X("Date:T", title="Date").timeUnit("yearmonthdate"),  # ✅ Affichage correct des dates
+        x=alt.X("Date:T", title="Date", axis=alt.Axis(labelAngle=90)).timeUnit("yearmonthdate"),  # ✅ Affichage correct des dates
         y=alt.Y("Cumul Alcool", title="Alcool en grammes cumulé"),
         color=alt.Color("Utilisateur", scale=alt.Scale(scheme='set2')),
         tooltip=["Date", "Utilisateur", "Cumul Alcool"]
