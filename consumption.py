@@ -162,17 +162,30 @@ def manage_consumptions():
     # 🔄 Inverser l'ordre des données pour afficher les plus récentes en premier
     df = df[::-1].reset_index(drop=True)
 
-    # Ajout d'une colonne d'index pour suppression
-    df["🗑️ Supprimer"] = [f"❌ Supprimer {i}" for i in df.index]
+    # Affichage sous forme de tableau simple
+    st.subheader(f"📋 Consommations de {selected_user}")
+    st.dataframe(df)
 
-    # Affichage sous forme de tableau interactif
-    edited_df = st.data_editor(df, num_rows="dynamic", disabled=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
+    # Ajout des boutons de suppression sous forme de colonnes
+    for index, row in df.iterrows():
+        col1, col2, col3, col4, col5, col6 = st.columns([1, 2, 2, 2, 2, 1])
 
-    # Vérifier si une ligne a été supprimée
-    for index in df.index:
-        if st.button(f"❌ Supprimer", key=f"delete_{index}"):
-            delete_consumption(selected_user, index)
-            st.rerun()
+        with col1:
+            if st.button("❌", key=f"delete_{index}"):
+                delete_consumption(selected_user, index)
+                st.rerun()
+
+        with col2:
+            st.write(f"📅 {row['Date']}")
+
+        with col3:
+            st.write(f"{row['Type']} - {row['Boisson']}")
+
+        with col4:
+            st.write(f"🍷 {row['Taille']} x{int(row['Quantité'])}")
+
+        with col5:
+            st.write(f"💪 {row['Alcool en grammes']:.1f} g")
 
 def delete_consumption(user, row_index):
     """ Supprime une consommation spécifique et met à jour Google Sheets """
