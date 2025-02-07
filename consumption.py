@@ -9,6 +9,13 @@ import time
 # Authentification Google Sheets
 SHEET = authenticate_gsheets()
 
+@st.cache_data
+def load_consumptions(user):
+    """ Charge les consommations d'un utilisateur depuis Google Sheets avec cache """
+    worksheet = get_worksheet(SHEET, user)
+    return get_as_dataframe(worksheet).dropna(how='all') if worksheet else pd.DataFrame(columns=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
+
+
 # 🔍 Données des boissons prédéfinies avec leur degré d'alcool
 DRINKS_DATA = {
     "🍺 Bière": {
@@ -51,32 +58,29 @@ GLASS_SIZES = {
     "🍺 Bière": {
         "Pinte (50cl)": 500,
         "Bouteille (33cl)": 330,
-        "Demi (25cl)": 250
+        "Demi (25cl)": 250,
+        "Autre": None  # Permet de déclencher la saisie manuelle
     },
     "🍷 Vin": {
         "Verre de vin (15cl)": 150,
-        "Bouteille (75cl)": 750
+        "Bouteille (75cl)": 750,
+        "Autre": None
     },
     "🥃 Hard": {
         "Shot (3cl)": 30,
         "Verre soirée (20cl)": 60,
-        "Cocktail (25cl)": 40
+        "Cocktail (25cl)": 40,
+        "Autre": None
     },
     "🍾 Autres": {
         "Coupe champagne (15 cl)": 150,
         "Bouteille (75cl)": 750,
         "Verre (20 cl)": 200,
-        "Ricard (2 cl)": 20
+        "Ricard (2 cl)": 20,
+        "Autre": None
     }
 }
 
-# 🔄 Charger les consommations d'un utilisateur
-def load_consumptions(user):
-    worksheet = get_worksheet(SHEET, user)
-    df = get_as_dataframe(worksheet).dropna(how='all')
-    return df if not df.empty else pd.DataFrame(columns=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
-
-# 🍻 Ajouter une consommation
 def add_consumption(user):
     st.title(f"🍻 Ajouter une consommation pour {user}")
 
@@ -100,8 +104,14 @@ def add_consumption(user):
 
     # Sélection de la taille du verre
     taille = st.selectbox("📏 Sélectionnez la taille du verre", list(GLASS_SIZES[type_boisson].keys()))
-    
-    volume_ml = GLASS_SIZES[type_boisson][taille]
+
+    # Si l'utilisateur sélectionne "Autre", permettre une saisie manuelle du volume
+    if taille == "Autre":
+        volume_cl = st.number_input("🔢 Entrez la quantité d'alcool en cl", min_value=1, max_value=50, step=1, value=10)
+        volume_ml = volume_cl * 10
+    else:
+        volume_ml = GLASS_SIZES[type_boisson][taille]
+
     # Quantité consommée
     quantite = st.number_input("🔢 Quantité consommée", min_value=1, max_value=20, step=1)
 
@@ -112,25 +122,27 @@ def add_consumption(user):
     # Conversion en grammes d'alcool pur (densité de l'alcool : 0.8 g/ml)
     alcool_grams = alcool_pur_volume * 1000 * 0.8  # Conversion en grammes
 
-    # Affichage des résultats (facultatif pour vérifier les calculs)
+    # Affichage des résultats
     st.write(f"Total Volume Alcool: {total_volume:.2f} L")
     st.write(f"Alcool en grammes: {alcool_grams:.2f} g")
-
 
     # Bouton d'enregistrement
     if st.button("💾 Enregistrer la consommation"):
         worksheet = get_worksheet(SHEET, user)
-        df = load_consumptions(user)
+        df = load_consumptions(user)  # Chargement depuis le cache
 
         new_data = pd.DataFrame([[date.strftime('%Y-%m-%d'), type_boisson, boisson, degree, taille, quantite, alcool_grams, total_volume]],
                                 columns=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
 
         updated_df = pd.concat([df, new_data], ignore_index=True)
-        set_with_dataframe(worksheet, updated_df)
+        set_with_dataframe(worksheet, updated_df)  # Enregistrement
 
+        st.cache_data.clear()  # 🚀 Invalide le cache pour recharger les données
         st.success(f"✅ {quantite} x {taille} de {boisson} ajouté ({alcool_grams:.2f} g d'alcool, {total_volume:.2f} L) !")
+        st.rerun()  # 🔄 Recharge la page pour afficher les nouvelles données
 
 def manage_consumptions():
+    """ Gère les consommations enregistrées et permet la suppression """
     st.title("🗑️ Gestion des consommations")
 
     users = load_users()
@@ -140,63 +152,52 @@ def manage_consumptions():
 
     selected_user = st.selectbox("👤 Sélectionnez un utilisateur", users)
 
-    # Charger les consommations de l'utilisateur
-    worksheet = get_worksheet(SHEET, selected_user)
-    df = get_as_dataframe(worksheet).dropna(how='all')
+    # Charger les consommations de l'utilisateur avec cache
+    df = load_consumptions(selected_user)
 
     if df.empty:
         st.info(f"Aucune consommation enregistrée pour {selected_user}.")
         return
 
-    # Ajout d'une colonne pour identifier chaque ligne unique
-    df["ID"] = df.index  # Identifiant unique basé sur l'index
-
     # 🔄 Inverser l'ordre des données pour afficher les plus récentes en premier
-    df = df.iloc[::-1].reset_index(drop=True)
+    df = df[::-1].reset_index(drop=True)
 
-    # Affichage des consommations avec un bouton de suppression
-    st.subheader(f"📋 Consommations de {selected_user}")
-    for index, row in df.iterrows():
-        col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 2])
+    # Ajout d'une colonne d'index pour suppression
+    df["🗑️ Supprimer"] = [f"❌ Supprimer {i}" for i in df.index]
 
-        with col1:
-            if st.button("❌", key=f"delete_{index}"):
-                delete_consumption(selected_user, index)
+    # Affichage sous forme de tableau interactif
+    edited_df = st.data_editor(df, num_rows="dynamic", disabled=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
 
-        with col2:
-            st.write(f"📅 {row['Date']}")
-
-        with col3:
-            st.write(f"{row['Type']} - {row['Boisson']}")
-
-        with col4:
-            st.write(f"🍷 {row['Taille']} x{int(row['Quantité'])}")
-
-        with col5:
-            st.write(f"💪 {row['Alcool en grammes']:.1f} g")
+    # Vérifier si une ligne a été supprimée
+    for index in df.index:
+        if st.button(f"❌ Supprimer", key=f"delete_{index}"):
+            delete_consumption(selected_user, index)
+            st.rerun()
 
 def delete_consumption(user, row_index):
-    """ Supprime une consommation spécifique d'un utilisateur dans Google Sheets """
+    """ Supprime une consommation spécifique et met à jour Google Sheets """
     worksheet = get_worksheet(SHEET, user)
+    
     if worksheet is None:
-        st.error(f"Erreur lors de l'accès à la feuille Google Sheets de {user}.")
+        st.error(f"❌ Erreur : Impossible d'accéder à la feuille de {user}. Vérifiez votre connexion Google Sheets.")
         return
 
-    df = get_as_dataframe(worksheet).dropna(how='all')
+    df = load_consumptions(user)
+
+    if df.empty:
+        st.warning("⚠️ Aucune donnée trouvée, impossible de supprimer une consommation.")
+        return
 
     if row_index in df.index:
-        df = df.drop(row_index).reset_index(drop=True)  # Supprime la ligne et réindexe
+        df = df.drop(row_index).reset_index(drop=True)  # Supprimer la ligne et réindexer
 
-        # ✅ Solution robuste : supprimer tout le contenu avant d'écrire les nouvelles données
+        # ✅ Écriture optimisée : supprimer puis réécrire les nouvelles données
         worksheet.clear()  # Efface tout le contenu de la feuille
         set_with_dataframe(worksheet, df)  # Réécrit les données mises à jour
 
+        st.cache_data.clear()  # 🚀 Invalide le cache pour recharger correctement
         st.success("✅ Consommation supprimée avec succès !")
-
-        # Attendre un peu pour éviter que la ligne ne réapparaisse immédiatement
-        time.sleep(1)
-
-        # Recharger la page pour refléter les changements
-        st.rerun()
+        
+        st.rerun()  # 🔄 Recharge immédiatement la page
     else:
-        st.warning("⚠️ Impossible de trouver cette consommation.")
+        st.warning(f"⚠️ Impossible de supprimer la consommation, la ligne {row_index} n'existe pas.")
