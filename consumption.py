@@ -83,7 +83,6 @@ def add_consumption(user):
     # Sélection des données
     date = st.date_input("📅 Sélectionnez la date", datetime.today())
     type_boisson = st.selectbox("🔍 Type de boisson", list(DRINKS_DATA.keys()))
-    step = step_values[type_boisson]
     boisson = st.selectbox("🍹 Sélectionnez la boisson", list(DRINKS_DATA[type_boisson].keys()))
 
     # Définition du step dynamique en fonction du type de boisson
@@ -93,6 +92,7 @@ def add_consumption(user):
         "🥃 Hard": 2.0,
         "🍾 Autres": 1.0
     }
+    step = step_values[type_boisson]
 
     # Pré-remplissage du degré d'alcool
     default_degree = DRINKS_DATA[type_boisson].get(boisson, 0.0) or 0.0
