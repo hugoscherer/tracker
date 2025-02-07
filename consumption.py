@@ -22,7 +22,8 @@ DRINKS_DATA = {
         "Heineken": 5.0,
         "Desperados": 5.9,
         "Corona": 4.5,
-        "Autre": None
+        "IPA": 6.0,
+        "Autre": 5.0
     },
     "🍷 Vin": {
         "Rouge": 12.5,
@@ -35,13 +36,13 @@ DRINKS_DATA = {
         "Whisky": 40.0,
         "Tequila": 38.0,
         "Gin": 37.5,
-        "Autre": None
+        "Autre": 40.0
     },
     "🍾 Autres": {
         "Champagne": 12.0,
         "Cidre": 4.5,
         "Pastis": 45.0,
-        "Autre": None
+        "Autre": 20.0
     }
 }
 
@@ -82,11 +83,20 @@ def add_consumption(user):
     # Sélection des données
     date = st.date_input("📅 Sélectionnez la date", datetime.today())
     type_boisson = st.selectbox("🔍 Type de boisson", list(DRINKS_DATA.keys()))
+    step = step_values[type_boisson]
     boisson = st.selectbox("🍹 Sélectionnez la boisson", list(DRINKS_DATA[type_boisson].keys()))
+
+    # Définition du step dynamique en fonction du type de boisson
+    step_values = {
+        "🍺 Bière": 0.1,
+        "🍷 Vin": 0.5,
+        "🥃 Hard": 2.0,
+        "🍾 Autres": 1.0
+    }
 
     # Pré-remplissage du degré d'alcool
     default_degree = DRINKS_DATA[type_boisson].get(boisson, 0.0) or 0.0
-    degree = st.number_input("✏️ Degré d'alcool (%)", min_value=0.0, max_value=100.0, value=default_degree, step=0.1)
+    degree = st.number_input("✏️ Degré d'alcool (%)", min_value=0.0, max_value=100.0, value=default_degree, step=step)
 
     # Sélection de la taille du verre
     taille = st.selectbox("📏 Sélectionnez la taille du verre", list(GLASS_SIZES[type_boisson].keys()))
