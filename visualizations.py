@@ -131,15 +131,15 @@ def visualize_consumption():
     with col3:
         st.metric("🥃 Bouteilles de hard bues", int(total_hard))
         
-    # Regroupement par jour pour avoir un point de donnée par jour
+    # Regroupement par jour pour obtenir un point de donnée par jour
     df_daily = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
 
     # Ajout d'une colonne de cumul par utilisateur
     df_daily["Cumul Alcool"] = df_daily.groupby("Utilisateur")["Alcool en grammes"].cumsum()
 
-    # Création du graphique Altair
+    # 📈 Création du graphique Altair
     chart_trend = alt.Chart(df_daily).mark_line(point=True).encode(
-        x=alt.X("Date:T", title="Date"),
+        x=alt.X("Date:T", title="Date").timeUnit("yearmonthdate"),  # ✅ Affichage correct des dates
         y=alt.Y("Cumul Alcool", title="Alcool en grammes cumulé"),
         color=alt.Color("Utilisateur", scale=alt.Scale(scheme='set2')),
         tooltip=["Date", "Utilisateur", "Cumul Alcool"]
@@ -147,7 +147,6 @@ def visualize_consumption():
 
     # Affichage dans Streamlit
     st.altair_chart(chart_trend, use_container_width=True)
-
     
     if selected_user == "Tous":
         
