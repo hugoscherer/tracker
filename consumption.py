@@ -85,7 +85,7 @@ def add_consumption(user):
     boisson = st.selectbox("🍹 Sélectionnez la boisson", list(DRINKS_DATA[type_boisson].keys()))
 
     # Pré-remplissage du degré d'alcool
-    default_degree = DRINKS_DATA[type_boisson].get(boisson, 0) or 0
+    default_degree = DRINKS_DATA[type_boisson].get(boisson, 0.0) or 0.0
     degree = st.number_input("✏️ Degré d'alcool (%)", min_value=0.0, max_value=100.0, value=default_degree, step=0.1)
 
     # Sélection de la taille du verre
