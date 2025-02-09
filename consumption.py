@@ -24,12 +24,13 @@ DRINKS_DATA = {
         "1664": 5.5,
         "Chouffe": 8.0,
         "Kronenbourg": 4.2,
-        "Blonde classique de bar": 4.5,
+        "Blonde bar": 4.5,
         "Leffe": 6.6,
         "Heineken": 5.0,
         "Desperados": 5.9,
         "Corona": 4.5,
         "IPA": 6.0,
+        "Pelforth": 5.8,
         "Autre": 5.0
     },
     "🍷 Vin": {
