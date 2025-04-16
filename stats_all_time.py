@@ -3,11 +3,9 @@ import pandas as pd
 import altair as alt
 from datetime import datetime
 import streamlit.components.v1 as components
-from google_sheets_utils import authenticate_gsheets
 from fonc import *
 
 def stats_all_time():
-    SHEET = authenticate_gsheets()
 
     st.title("📊 Stats All-Time")
 
@@ -18,10 +16,18 @@ def stats_all_time():
 
     df["Date"] = pd.to_datetime(df["Date"])
 
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
+
     # 🥇 Podium all-time
     st.subheader("🏆 Podium All-Time")
     podium = df.groupby("Utilisateur")["Alcool en grammes"].sum().reset_index().sort_values(by="Alcool en grammes", ascending=False).head(3)
     st.components.v1.html(generate_podium(podium), height=250)
+
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
     # 📥 Sélection des utilisateurs à inclure
     st.subheader("👤 Filtrer par utilisateur")
@@ -31,6 +37,10 @@ def stats_all_time():
 
     if user_choice != "Tous les utilisateurs":
         df = df[df["Utilisateur"] == user_choice]
+
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
     # 📊 Indicateurs généraux
     st.subheader("📊 Indicateurs globaux")
@@ -52,7 +62,11 @@ def stats_all_time():
     with col3:
         st.metric("🥃 Bouteilles de hard", int(total_hard))
 
-    # 👑 Leaders all-time améliorés
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
+
+    # 👑 Leaders all-time
     st.subheader("👑 Leaders par type")
 
     leader_biere = get_top_user(df, df["Type"] == "🍺 Bière")
@@ -82,21 +96,45 @@ def stats_all_time():
             cocktails = row["Alcool en grammes"] / 12.5
             st.write(f"**{row['Utilisateur']}** ({cocktails:.0f} cocktails)")
 
-    # 📈 Line chart de la conso hebdomadaire par utilisateur
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
+    # 📈 Évolution hebdomadaire - par utilisateur (avec semaines à 0)
     st.subheader("📈 Évolution hebdomadaire - par utilisateur")
 
-    # Extraire semaine ISO
+    df["Date"] = pd.to_datetime(df["Date"])
     df["Semaine"] = df["Date"].dt.isocalendar().week
     df["Année"] = df["Date"].dt.isocalendar().year
-    weekly = df.groupby(["Année", "Semaine", "Utilisateur"])["Alcool en grammes"].sum().reset_index()
-    weekly["Semaine ISO"] = weekly["Année"].astype(str) + "-S" + weekly["Semaine"].astype(str).str.zfill(2)
+    utilisateurs = df["Utilisateur"].unique()
 
-    # Convertir Semaine ISO en date approximative (pour tri X)
-    weekly["Date ISO"] = pd.to_datetime(weekly["Année"].astype(str) + weekly["Semaine"].astype(str) + '1', format="%G%V%u")
+    # Créer toutes les semaines entre min et max date
+    start_week = df["Date"].min().to_period('W').start_time
+    end_week = pd.to_datetime("today").to_period('W').start_time
+    all_weeks = pd.date_range(start=start_week, end=end_week, freq="W-MON")  # Lundi de chaque semaine
 
-    # Line chart
-    line_chart = alt.Chart(weekly).mark_line(point=True).encode(
+    # Créer Année + Semaine à partir des dates
+    weeks_df = pd.DataFrame({"Date ISO": all_weeks})
+    weeks_df["Année"] = weeks_df["Date ISO"].dt.isocalendar().year
+    weeks_df["Semaine"] = weeks_df["Date ISO"].dt.isocalendar().week
+    weeks_df["Semaine ISO"] = weeks_df["Année"].astype(str) + "-S" + weeks_df["Semaine"].astype(str).str.zfill(2)
+
+    # Combinaison complète Semaine x Utilisateur
+    full_weeks = pd.MultiIndex.from_product([weeks_df["Année"], weeks_df["Semaine"], utilisateurs], names=["Année", "Semaine", "Utilisateur"])
+    df_full_weeks = pd.DataFrame(index=full_weeks).reset_index()
+
+    # Ajout de Semaine ISO et Date ISO
+    df_full_weeks = pd.merge(df_full_weeks, weeks_df, on=["Année", "Semaine"], how="left")
+
+    # Regrouper les conso réelles
+    weekly = df.groupby(["Année", "Semaine", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
+
+    # Fusionner avec la grille complète
+    weekly_merged = pd.merge(df_full_weeks, weekly, on=["Année", "Semaine", "Utilisateur"], how="left")
+    weekly_merged["Alcool en grammes"] = weekly_merged["Alcool en grammes"].fillna(0)
+
+    # Graphe
+    line_chart = alt.Chart(weekly_merged).mark_line(point=True).encode(
         x=alt.X("Date ISO:T", title="Semaine"),
         y=alt.Y("Alcool en grammes:Q", title="Grammage (g)"),
         color=alt.Color("Utilisateur:N", title="Utilisateur", scale=alt.Scale(scheme="set2")),
@@ -105,12 +143,14 @@ def stats_all_time():
         width=800,
         height=400,
     )
-
     st.altair_chart(line_chart, use_container_width=True)
+
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
     
     # 🍺 Top 7 bières les plus bues (en pintes)
     st.subheader("🍺 Top 7 bières les plus bues")
-
     top_bieres = df[df["Type"] == "🍺 Bière"].groupby("Boisson")["Volume en litres"].sum().reset_index()
     top_bieres["Pintes"] = top_bieres["Volume en litres"] / 0.5
     top_bieres = top_bieres.sort_values(by="Pintes", ascending=False).head(7)
@@ -123,13 +163,14 @@ def stats_all_time():
     ).properties(
         height=300,
     )
-
     st.altair_chart(chart_bieres, use_container_width=True)
 
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
     # 🥃 Top 5 alcools forts (en shots)
     st.subheader("🥃 Top 5 alcools forts les plus bus")
-
     top_hard = df[df["Type"].str.contains("Hard")].groupby("Boisson")["Volume en litres"].sum().reset_index()
     top_hard["Shots"] = top_hard["Volume en litres"] / 0.03
     top_hard = top_hard.sort_values(by="Shots", ascending=False).head(5)
@@ -142,13 +183,10 @@ def stats_all_time():
     ).properties(
         height=250,
     )
-
     st.altair_chart(chart_hard, use_container_width=True)
-
 
     # 🥤 Top 7 tailles de verres utilisées
     st.subheader("🥤 Tailles de verres les plus utilisées")
-
     top_tailles = df.groupby("Taille")["Quantité"].sum().reset_index().sort_values(by="Quantité", ascending=False).head(7)
 
     chart_tailles = alt.Chart(top_tailles).mark_bar().encode(
@@ -159,12 +197,13 @@ def stats_all_time():
     ).properties(
         height=300,
     )
-
     st.altair_chart(chart_tailles, use_container_width=True)
 
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
     # 📅 Moyenne de consommation par jour de la semaine (avec jours sans alcool inclus)
-
     st.subheader("📅 Moyenne d'alcool consommé par jour de la semaine")
 
     # Base de référence
@@ -198,13 +237,17 @@ def stats_all_time():
     ).properties(
         height=300,
     )
-
     st.altair_chart(chart_jours, use_container_width=True)
+
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
     # 🔢 Jours avec/sans alcool
     st.subheader("📅 Présence d’alcool dans la semaine")
     df_jours = df.groupby("Date")["Alcool en grammes"].sum().reset_index()
     nb_jours_bu = (df_jours["Alcool en grammes"] > 0).sum()
+
     # Nombre de jours depuis le 31 janvier
     date_depart = pd.to_datetime("2025-01-31")
     date_aujourdhui = pd.to_datetime("today").normalize()
@@ -212,37 +255,166 @@ def stats_all_time():
     
     st.write(f"**{nb_jours_bu} jours** avec alcool sur **{nb_jours_total} jours**. ({nb_jours_bu/nb_jours_total*100}%)")
 
-    # 📊 Analyse par utilisateur/jour
-    df_par_jour = df.groupby(["Date", "Utilisateur"])["Alcool en grammes"].sum().reset_index()
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
 
+    # S'assurer que la date est bien en format datetime
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    # Lister tous les utilisateurs
+    utilisateurs = df["Utilisateur"].unique()
+
+    # Générer toutes les dates entre le premier jour et aujourd’hui
+    dates_all = pd.date_range(start=df["Date"].min(), end=pd.to_datetime("today"))
+
+    # Combinaisons complètes Date x Utilisateur
+    full_index = pd.MultiIndex.from_product([dates_all, utilisateurs], names=["Date", "Utilisateur"])
+    df_full = pd.DataFrame(index=full_index).reset_index()
+
+    # Regrouper les consommations réelles
+    df_jour = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
+
+    # Fusionner pour inclure les jours sans conso
+    df_merged = pd.merge(df_full, df_jour, on=["Date", "Utilisateur"], how="left")
+    df_merged["Alcool en grammes"] = df_merged["Alcool en grammes"].fillna(0)
+
+    # Classification des zones de consommation
     def classify_jour(g):
-        if g <= 25:
-            return "🟢 ≤25g"
+        if g == 0:
+            return "0g"
+        elif g <= 25:
+            return ">0-25g"
         elif g <= 50:
-            return "🟡 25-50g"
+            return "25-50g"
         elif g <= 100:
-            return "🟠 50-100g"
+            return "50-100g"
+        elif g <= 200:
+            return "100-200g"
         else:
-            return "🔴 >100g"
+            return ">200g"
 
-    df_par_jour["Zone"] = df_par_jour["Alcool en grammes"].apply(classify_jour)
+    df_merged["Zone"] = df_merged["Alcool en grammes"].apply(classify_jour)
 
-    # Comptage par zone et utilisateur
-    tab_zones = df_par_jour.groupby(["Utilisateur", "Zone"]).size().unstack(fill_value=0)
+    # Comptage des zones par utilisateur
+    tab_zones = df_merged.groupby(["Utilisateur", "Zone"]).size().unstack(fill_value=0)
 
-    # 🧾 Réorganisation visuelle (ordre voulu)
-    zone_order = ["🟢 ≤25g", "🟡 25-50g", "🟠 50-100g", "🔴 >100g"]
+    # Réorganisation des colonnes dans l’ordre souhaité
+    zone_order = ["0g", ">0-25g", "25-50g", "50-100g", "100-200g", ">200g"]
     tab_zones = tab_zones.reindex(columns=zone_order, fill_value=0)
 
-    st.subheader("📊 Répartition des jours par utilisateur et par zone de consommation")
-    st.dataframe(tab_zones)
+    # Couleurs pastel progressives
+    zone_colors = {
+    "0g": "#A8E6CF",      # vert pastel
+    ">0-25g": "#DCEDC1",   # vert clair pastel
+    "25-50g": "#FFFACD",   # jaune très doux (citron givré)
+    "50-100g": "#FFD3B6",   # orange clair pastel
+    "100-200g": "#FFAAA5",   # rouge clair pastel
+    ">200g": "#FF8B94",      # rouge pastel
+    }
 
-    # 📈 Graphe d’évolution
+    # Appliquer les couleurs à chaque colonne
+    def highlight_column(val, colname):
+        color = zone_colors.get(colname, "#ffffff")
+        return f"background-color: {color}"
+
+    styled_table = tab_zones.style.apply(
+        lambda col: [highlight_column(v, col.name) for v in col], axis=0
+    )
+
+    # Affichage
+    st.subheader("📊 Répartition des jours par zone de consommation")
+    st.dataframe(styled_table, use_container_width=True)
+
+
+    ######################################################################################################
+    ######################################################################################################
+    ######################################################################################################
+
+    # 📊 Analyse par utilisateur/semaine (avec vraies couleurs)
+
+    # S'assurer que les dates sont bien formatées
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    # Extraire les infos semaine et année
+    df["Semaine"] = df["Date"].dt.isocalendar().week
+    df["Année"] = df["Date"].dt.isocalendar().year
+
+    # Regroupement par utilisateur et semaine
+    df_par_semaine = df.groupby(["Année", "Semaine", "Utilisateur"])["Alcool en grammes"].sum().reset_index()
+
+    # Classification des zones par grammage
+    def classify_zone(g):
+        if g < 100:
+            return "<100g"
+        elif g < 200:
+            return "100-200g"
+        elif g < 300:
+            return "200-300g"
+        elif g < 400:
+            return "300-400g"
+        elif g < 500:
+            return "400-500g"
+        else:
+            return ">500g"
+
+    df_par_semaine["Zone"] = df_par_semaine["Alcool en grammes"].apply(classify_zone)
+
+    # Création du tableau croisé
+    tab_zones = df_par_semaine.groupby(["Utilisateur", "Zone"]).size().unstack(fill_value=0)
+
+    # Réorganisation de l’ordre des colonnes
+    zone_order = ["<100g", "100-200g", "200-300g", "300-400g", "400-500g", ">500g"]
+    tab_zones = tab_zones.reindex(columns=zone_order, fill_value=0)
+
+    # Définition des couleurs à appliquer par zone
+    zone_colors = {
+    "<100g": "#A8E6CF",      # vert pastel
+    "100-200g": "#DCEDC1",   # vert clair pastel
+    "200-300g": "#FFFACD",   # jaune très doux (citron givré)
+    "300-400g": "#FFD3B6",   # orange clair pastel
+    "400-500g": "#FFAAA5",   # rouge clair pastel
+    ">500g": "#FF8B94",      # rouge pastel
+    }
+
+    # Fonction d'application des couleurs par colonne
+    def highlight_column(val, colname):
+        color = zone_colors.get(colname, "#ffffff")
+        return f"background-color: {color}"
+
+    # Application des couleurs à chaque colonne selon son nom
+    styled_table = tab_zones.style.apply(
+        lambda col: [highlight_column(v, col.name) for v in col], axis=0
+    )
+
+    # Affichage
+    st.subheader("📊 Répartition des semaines par zone de consommation")
+    st.dataframe(styled_table, use_container_width=True)
+
+    # 📈 Évolution cumulée (all-time avec jours à 0)
+
     st.subheader("📈 Évolution cumulée")
-    df_daily = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
-    df_daily["Cumul Alcool"] = df_daily.groupby("Utilisateur")["Alcool en grammes"].cumsum()
 
-    chart = alt.Chart(df_daily).mark_line(point=True).encode(
+    df["Date"] = pd.to_datetime(df["Date"])
+    utilisateurs = df["Utilisateur"].unique()
+    dates_all = pd.date_range(start=df["Date"].min(), end=pd.to_datetime("today"))
+
+    # Générer toutes les combinaisons Date x Utilisateur
+    full_index = pd.MultiIndex.from_product([dates_all, utilisateurs], names=["Date", "Utilisateur"])
+    df_full = pd.DataFrame(index=full_index).reset_index()
+
+    # Regrouper les conso réelles
+    df_grouped = df.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
+
+    # Fusion pour compléter avec 0
+    df_merged = pd.merge(df_full, df_grouped, on=["Date", "Utilisateur"], how="left")
+    df_merged["Alcool en grammes"] = df_merged["Alcool en grammes"].fillna(0)
+
+    # Cumul par utilisateur
+    df_merged["Cumul Alcool"] = df_merged.groupby("Utilisateur")["Alcool en grammes"].cumsum()
+
+    # Graphe
+    chart = alt.Chart(df_merged).mark_line(point=True).encode(
         x=alt.X("Date:T", title="Date", axis=alt.Axis(labelAngle=-90)),
         y=alt.Y("Cumul Alcool", title="Alcool en grammes cumulé"),
         color=alt.Color("Utilisateur:N", scale=alt.Scale(scheme="set2")),

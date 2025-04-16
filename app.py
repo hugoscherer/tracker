@@ -7,23 +7,32 @@ from stats_du_mois import *
 def main():
     st.sidebar.title("Menu")
     page = st.sidebar.radio("Navigation", ["Ajouter une consommation", "Supprimer une consommation", "Stats du mois", "Stats all time", "Ajouter un utilisateur"])
+    USERS_LIST = load_users()
 
     if page == "Ajouter une consommation":
-        users = load_users()
-        if users:
-            selected_user = st.selectbox("Sélectionnez un utilisateur", users)
-            add_consumption(selected_user)
+        if USERS_LIST:
+        # Sélection de l'utilisateur
+            selected_user = st.selectbox("👤 Sélectionnez un utilisateur", USERS_LIST)
+
+            # Chargement des données une seule fois
+            with st.spinner("Chargement des consommations..."):
+                df_user = load_consumptions(selected_user)            
+                add_consumption(selected_user, df_user)
         else:
             st.warning("Ajoutez un utilisateur avant de pouvoir enregistrer une consommation.")
     
     elif page == "Supprimer une consommation":
-        users = load_users()
-        if users:
-            selected_user = st.selectbox("Sélectionnez un utilisateur", users)
-            manage_consumptions(selected_user)
+        if USERS_LIST:
+        # Sélection de l'utilisateur
+            selected_user = st.selectbox("👤 Sélectionnez un utilisateur", USERS_LIST)
+
+            # Chargement des données une seule fois
+            with st.spinner("Chargement des consommations..."):
+                df_user = load_consumptions(selected_user)            
+                manage_consumptions(selected_user, df_user)
         else:
             st.warning("Ajoutez un utilisateur avant de pouvoir enregistrer une consommation.")
-
+    
     elif page == "Stats du mois":
         stats_du_mois()
 
