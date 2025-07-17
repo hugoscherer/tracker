@@ -114,7 +114,6 @@ def add_consumption(user):
 
         st.success("✅ Consommation ajoutée avec succès !")
 
-
 def manage_consumptions(user):
     df = load_consumptions(user)
     st.title("🗑️ Gestion des consommations")
