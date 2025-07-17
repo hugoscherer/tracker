@@ -10,17 +10,18 @@ SHEET = authenticate_gsheets()
 # Données boissons et tailles (inchangées)
 DRINKS_DATA = {
     "🍺 Bière": {
-        "Affligem": 6.7, "Bête": 8.0, "1664": 5.5, "Chouffe": 8.0,
-        "Kronenbourg": 4.2, "Blonde bar": 4.5, "Leffe": 6.6,
-        "Heineken": 5.0, "Desperados": 5.9, "Corona": 4.5,
-        "IPA": 6.0, "Pelforth": 5.8, "Autre": 5.0
+        "IPA": 6.0, "Bête": 8.0, "1664": 5.5, "Kronenbourg": 4.2, 
+        "Affligem": 6.7, "Chouffe": 8.0, "Blonde bar": 4.5,
+        "Heineken": 5.0, "Desperados": 5.9, "Corona": 4.5, "Leffe": 6.6, 
+        "Fischer": 6.0, "Blanche": 5.0, "Pelforth": 5.8, "Autre": 5.0
     },
     "🍷 Vin": {
         "Rouge": 12.5, "Blanc": 11.0, "Rosé": 12.0
     },
     "🥃 Hard": {
         "Vodka": 40.0, "Rhum": 40.0, "Whisky": 40.0,
-        "Tequila": 38.0, "Gin": 37.5, "Pastis": 45.0, "Autre": 40.0
+        "Tequila": 38.0, "Gin": 37.5, "Nikka": 51.0, "Pastis": 45.0, 
+        "Amaretto": 28.0, "Cognac": 37.5, "Autre": 40.0
     },
     "🍾 Autres": {
         "Champagne": 12.0, "Cidre": 4.5, "Liqueur": 20.0, "Autre": 10.0
