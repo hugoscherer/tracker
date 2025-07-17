@@ -112,7 +112,10 @@ def add_consumption(user):
         st.session_state[f"consumptions_{user}"] = updated_df
         save_consumptions(user)
 
-        st.success("✅ Consommation ajoutée avec succès !")
+        # Message avec détails ajoutés
+        st.success(
+            f"✅ Consommation ajoutée : {quantite} x {taille} de {boisson} ({type_boisson}), {degree}% d'alcool, le {date.strftime('%Y-%m-%d')}."
+        )
 
 def manage_consumptions(user):
     df = load_consumptions(user)
@@ -122,7 +125,7 @@ def manage_consumptions(user):
         st.info(f"Aucune consommation enregistrée pour {user}.")
         return
 
-    df_display = df[::-1].reset_index()
+    df_display = df.iloc[::-1]  # Inverser sans reset index pour garder les index d'origine
 
     st.markdown("### 📋 Consommations récentes")
 
@@ -133,19 +136,25 @@ def manage_consumptions(user):
     header[3].markdown("**Alcool**")
     header[4].markdown("**❌**")
 
-    for _, row in df_display.iterrows():
+    for idx, row in df_display.iterrows():
         cols = st.columns([2, 3, 2, 2, 1])
         cols[0].write(f"{row['Date']}")
         cols[1].write(f"{row['Type']} - {row['Boisson']}")
         cols[2].write(f"{row['Taille']} x{int(row['Quantité'])}")
         cols[3].write(f"{row['Alcool en grammes']:.1f} g")
-        if cols[4].button("❌", key=f"delete_{row['index']}"):
-            delete_consumption(user, row['index'])
+        if cols[4].button("❌", key=f"delete_{idx}"):
+            delete_consumption(user, idx)
 
 def delete_consumption(user, index_to_delete):
     df = load_consumptions(user)
     if index_to_delete in df.index:
-        df = df.drop(index_to_delete).reset_index(drop=True)
+        row = df.loc[index_to_delete]
+        df = df.drop(index_to_delete)
         st.session_state[f"consumptions_{user}"] = df
         save_consumptions(user)
-        st.session_state["consommation_supprimee"] = True
+
+        # Message avec détails supprimés
+        st.success(
+            f"🗑️ Consommation supprimée : {int(row['Quantité'])} x {row['Taille']} de {row['Boisson']} ({row['Type']}), {row['Degré d\'alcool']}% d'alcool, du {row['Date']}."
+        )
+        st.experimental_rerun()  # Forcer rerun pour mise à jour immédiate
