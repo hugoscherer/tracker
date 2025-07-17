@@ -111,7 +111,10 @@ def add_consumption(user):
         updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
         st.session_state[f"consumptions_{user}"] = updated_df
         save_consumptions(user)
-        st.success(f"✅ {quantite} x {taille} de {boisson} ajouté ({alcool_grams:.2f} g) !")
+        
+        # On définit un flag pour afficher le message au reload
+        st.session_state["consommation_ajoutee"] = True
+        
         st.experimental_rerun()
 
 def manage_consumptions(user):
@@ -140,10 +143,15 @@ def manage_consumptions(user):
         cols[2].write(f"{row['Taille']} x{int(row['Quantité'])}")
         cols[3].write(f"{row['Alcool en grammes']:.1f} g")
         if cols[4].button("❌", key=f"delete_{row['index']}"):
-            df = load_consumptions(user)
-            if row['index'] in df.index:
-                df = df.drop(row['index']).reset_index(drop=True)
-                st.session_state[f"consumptions_{user}"] = df
-                save_consumptions(user)
-                st.success("✅ Consommation supprimée avec succès !")
-                st.experimental_rerun()
+            # Suppression et sauvegarde dans une fonction séparée
+            delete_consumption(user, row['index'])
+            st.experimental_rerun()
+
+def delete_consumption(user, index_to_delete):
+    df = load_consumptions(user)
+    if index_to_delete in df.index:
+        df = df.drop(index_to_delete).reset_index(drop=True)
+        st.session_state[f"consumptions_{user}"] = df
+        save_consumptions(user)
+        st.session_state["consommation_supprimee"] = True
+

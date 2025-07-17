@@ -12,6 +12,12 @@ def main():
 
     USERS_LIST = load_users()
 
+    # Afficher le message succès si flag set, puis reset
+    if st.session_state.get("consommation_ajoutee"):
+        st.success("✅ Consommation ajoutée avec succès !")
+        st.session_state["consommation_ajoutee"] = False
+
+
     if category == "Consommations":
         action = st.sidebar.radio("Action", ["Ajouter une consommation", "Supprimer une consommation"])
         if action == "Ajouter une consommation":
