@@ -7,12 +7,12 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 # Authentification Google Sheets
 SHEET = authenticate_gsheets()
 
-# Données boissons et tailles (inchangées)
+# Données boissons et tailles
 DRINKS_DATA = {
     "🍺 Bière": {
-        "IPA": 6.0, "Bête": 8.0, "1664": 5.5, "Kronenbourg": 4.2, 
+        "IPA": 6.0, "Bête": 8.0, "1664": 5.5, "Kronenbourg": 4.2,
         "Affligem": 6.7, "Chouffe": 8.0, "Blonde bar": 4.5,
-        "Heineken": 5.0, "Desperados": 5.9, "Corona": 4.5, "Leffe": 6.6, 
+        "Heineken": 5.0, "Desperados": 5.9, "Corona": 4.5, "Leffe": 6.6,
         "Fischer": 6.0, "Blanche": 5.0, "Pelforth": 5.8, "Autre": 5.0
     },
     "🍷 Vin": {
@@ -20,7 +20,7 @@ DRINKS_DATA = {
     },
     "🥃 Hard": {
         "Vodka": 40.0, "Rhum": 40.0, "Whisky": 40.0,
-        "Tequila": 38.0, "Gin": 37.5, "Nikka": 51.0, "Pastis": 45.0, 
+        "Tequila": 38.0, "Gin": 37.5, "Nikka": 51.0, "Pastis": 45.0,
         "Amaretto": 28.0, "Cognac": 37.5, "Autre": 40.0
     },
     "🍾 Autres": {
@@ -45,9 +45,9 @@ GLASS_SIZES = {
     }
 }
 
-def load_consumptions(user):
+def load_consumptions(user, force_reload=False):
     key = f"consumptions_{user}"
-    if key not in st.session_state:
+    if force_reload or key not in st.session_state:
         worksheet = get_worksheet(SHEET, user)
         if worksheet is None:
             st.session_state[key] = pd.DataFrame(columns=[
@@ -111,10 +111,9 @@ def add_consumption(user):
         updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
         st.session_state[f"consumptions_{user}"] = updated_df
         save_consumptions(user)
-        
-        # On définit un flag pour afficher le message au reload
-        st.session_state["consommation_ajoutee"] = True
-        
+
+        st.success("✅ Consommation ajoutée avec succès !")
+
         st.experimental_rerun()
 
 def manage_consumptions(user):
@@ -143,7 +142,6 @@ def manage_consumptions(user):
         cols[2].write(f"{row['Taille']} x{int(row['Quantité'])}")
         cols[3].write(f"{row['Alcool en grammes']:.1f} g")
         if cols[4].button("❌", key=f"delete_{row['index']}"):
-            # Suppression et sauvegarde dans une fonction séparée
             delete_consumption(user, row['index'])
             st.experimental_rerun()
 
@@ -154,4 +152,3 @@ def delete_consumption(user, index_to_delete):
         st.session_state[f"consumptions_{user}"] = df
         save_consumptions(user)
         st.session_state["consommation_supprimee"] = True
-
