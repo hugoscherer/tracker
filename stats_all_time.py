@@ -428,44 +428,25 @@ def stats_all_time():
 
     ######################################################################################################
     ######################################################################################################
-    # 📅 Répartition des semaines selon le nombre de jours bus
+    # 📅 Fréquence des semaines par nombre de jours bus
     st.subheader("📆 Répartition des semaines selon le nombre de jours bus")
 
     df["Date"] = pd.to_datetime(df["Date"])
     df["Semaine"] = df["Date"].dt.strftime("%Y-%U")
     df["Jour"] = df["Date"].dt.date
 
-    df_filtered = df if user_choice == "Tous les utilisateurs" else df[df["Utilisateur"] == user_choice]
+    if user_choice != "Tous les utilisateurs":
+        df_filtered = df[df["Utilisateur"] == user_choice]
+    else:
+        df_filtered = df.copy()
+
     jours_par_semaine = df_filtered.groupby("Semaine")["Jour"].nunique()
+    # Assure qu'on a toutes les valeurs de 0 à 7
     distribution = jours_par_semaine.value_counts().reindex(range(0, 8), fill_value=0).sort_index()
 
-    color_map = {
-        0: "#d4edda",  # vert clair
-        1: "#d1ecf1",  # bleu très clair
-        2: "#bee5eb",
-        3: "#ffeeba",  # jaune clair
-        4: "#f8d7da",
-        5: "#f5c6cb",
-        6: "#f1b0b7",
-        7: "#f8bbd0"   # rose soutenu
-    }
+    dist_df = pd.DataFrame({
+        "Nombre de jours bus dans la semaine": distribution.index,
+        "Nombre de semaines": distribution.values
+    })
 
-    table_html = """
-    <table style='width: 100%; border-collapse: collapse;'>
-      <tr>
-        <th style='border-bottom: 2px solid #999; padding: 8px;'>Jours bus / semaine</th>
-        <th style='border-bottom: 2px solid #999; padding: 8px;'>Nombre de semaines</th>
-      </tr>
-    """
-    for nb_jours, nb_semaines in distribution.items():
-        color = color_map.get(nb_jours, "#ffffff")
-        table_html += f"""
-        <tr style='background-color: {color};'>
-          <td style='padding: 8px; text-align: center;'>{nb_jours}</td>
-          <td style='padding: 8px; text-align: center;'><b>{nb_semaines}</b></td>
-        </tr>
-        """
-    table_html += "</table>"
-
-    st.markdown(table_html, unsafe_allow_html=True)
-
+    st.dataframe(dist_df, use_container_width=True)
