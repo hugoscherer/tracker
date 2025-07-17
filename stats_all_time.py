@@ -425,3 +425,21 @@ def stats_all_time():
     ).properties(width=800, height=400)
 
     st.altair_chart(chart, use_container_width=True)
+
+    ######################################################################################################
+    ######################################################################################################
+    
+    # 📅 Nombre de jours bus par semaine
+    st.subheader("📆 Nombre de jours bus par semaine")
+
+    df["Date"] = pd.to_datetime(df["Date"])
+    df["Semaine"] = df["Date"].dt.strftime("%Y-%U")  # Format année-semaine
+    df["Jour"] = df["Date"].dt.date  # Pour ne compter qu'une fois par jour
+
+    jours_par_semaine = df.groupby(["Semaine", "Utilisateur"])["Jour"].nunique().reset_index()
+    jours_par_semaine = jours_par_semaine.rename(columns={"Jour": "Jours bus"})
+
+    if user_choice != "Tous les utilisateurs":
+        st.dataframe(jours_par_semaine[["Semaine", "Jours bus"]].sort_values("Semaine"), use_container_width=True)
+    else:
+        st.dataframe(jours_par_semaine.sort_values("Semaine"), use_container_width=True)
