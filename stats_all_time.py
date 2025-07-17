@@ -428,18 +428,25 @@ def stats_all_time():
 
     ######################################################################################################
     ######################################################################################################
-    
-    # 📅 Nombre de jours bus par semaine
-    st.subheader("📆 Nombre de jours bus par semaine")
+    # 📅 Fréquence des semaines par nombre de jours bus
+    st.subheader("📆 Répartition des semaines selon le nombre de jours bus")
 
     df["Date"] = pd.to_datetime(df["Date"])
-    df["Semaine"] = df["Date"].dt.strftime("%Y-%U")  # Format année-semaine
-    df["Jour"] = df["Date"].dt.date  # Pour ne compter qu'une fois par jour
-
-    jours_par_semaine = df.groupby(["Semaine", "Utilisateur"])["Jour"].nunique().reset_index()
-    jours_par_semaine = jours_par_semaine.rename(columns={"Jour": "Jours bus"})
+    df["Semaine"] = df["Date"].dt.strftime("%Y-%U")
+    df["Jour"] = df["Date"].dt.date
 
     if user_choice != "Tous les utilisateurs":
-        st.dataframe(jours_par_semaine[["Semaine", "Jours bus"]].sort_values("Semaine"), use_container_width=True)
+        df_filtered = df[df["Utilisateur"] == user_choice]
     else:
-        st.dataframe(jours_par_semaine.sort_values("Semaine"), use_container_width=True)
+        df_filtered = df.copy()
+
+    jours_par_semaine = df_filtered.groupby("Semaine")["Jour"].nunique()
+    # Assure qu'on a toutes les valeurs de 0 à 7
+    distribution = jours_par_semaine.value_counts().reindex(range(0, 8), fill_value=0).sort_index()
+
+    dist_df = pd.DataFrame({
+        "Nombre de jours bus dans la semaine": distribution.index,
+        "Nombre de semaines": distribution.values
+    })
+
+    st.dataframe(dist_df, use_container_width=True)
