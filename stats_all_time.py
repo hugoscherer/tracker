@@ -428,25 +428,27 @@ def stats_all_time():
 
     ######################################################################################################
     ######################################################################################################
-    # 📅 Fréquence des semaines par nombre de jours bus
-    st.subheader("📆 Répartition des semaines selon le nombre de jours bus")
-
-    df["Date"] = pd.to_datetime(df["Date"])
-    df["Semaine"] = df["Date"].dt.strftime("%Y-%U")
-    df["Jour"] = df["Date"].dt.date
-
     if user_choice != "Tous les utilisateurs":
-        df_filtered = df[df["Utilisateur"] == user_choice]
-    else:
-        df_filtered = df.copy()
 
-    jours_par_semaine = df_filtered.groupby("Semaine")["Jour"].nunique()
-    # Assure qu'on a toutes les valeurs de 0 à 7
-    distribution = jours_par_semaine.value_counts().reindex(range(0, 8), fill_value=0).sort_index()
+        # 📅 Fréquence des semaines par nombre de jours bus
+        st.subheader("📆 Répartition des semaines selon le nombre de jours bus")
 
-    dist_df = pd.DataFrame({
-        "Nombre de jours bus dans la semaine": distribution.index,
-        "Nombre de semaines": distribution.values
-    })
+        df["Date"] = pd.to_datetime(df["Date"])
+        df["Semaine"] = df["Date"].dt.strftime("%Y-%U")
+        df["Jour"] = df["Date"].dt.date
 
-    st.dataframe(dist_df, use_container_width=True)
+        if user_choice != "Tous les utilisateurs":
+            df_filtered = df[df["Utilisateur"] == user_choice]
+        else:
+            df_filtered = df.copy()
+
+        jours_par_semaine = df_filtered.groupby("Semaine")["Jour"].nunique()
+        # Assure qu'on a toutes les valeurs de 0 à 7
+        distribution = jours_par_semaine.value_counts().reindex(range(0, 8), fill_value=0).sort_index()
+
+        dist_df = pd.DataFrame({
+            "Nombre de jours bus dans la semaine": distribution.index,
+            "Nombre de semaines": distribution.values
+        })
+
+        st.dataframe(dist_df, use_container_width=True)
