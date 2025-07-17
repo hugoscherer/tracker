@@ -70,6 +70,15 @@ def add_consumption(user):
     df = load_consumptions(user)
     st.title(f"🍻 Ajouter une consommation pour {user}")
 
+    # ➕ Afficher la dernière consommation si disponible
+    if not df.empty:
+        last_row = df.iloc[-1]
+        last_summary = (
+            f"{int(last_row['Quantité'])} x {last_row['Taille']} de {last_row['Boisson']} "
+            f"({last_row['Type']}) le {last_row['Date']}"
+        )
+        st.markdown(f"**📌 Dernière consommation enregistrée :** {last_summary}")
+
     date = st.date_input("📅 Sélectionnez la date", datetime.today())
     type_boisson = st.selectbox("🔍 Type de boisson", list(DRINKS_DATA.keys()))
     boisson = st.selectbox("🍹 Sélectionnez la boisson", list(DRINKS_DATA[type_boisson].keys()))
@@ -134,7 +143,7 @@ def manage_consumptions(user):
     header[1].markdown("**🍻 Type - Boisson**")
     header[2].markdown("**📏 Taille x Qté**")
     header[3].markdown("**Alcool**")
-    header[4].markdown("**❌**")
+    header[4].markdown("**Supprimer**")
 
     for idx, row in df_display.iterrows():
         cols = st.columns([2, 3, 2, 2, 1])
