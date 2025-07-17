@@ -114,7 +114,6 @@ def add_consumption(user):
 
         st.success("✅ Consommation ajoutée avec succès !")
 
-        st.experimental_rerun()
 
 def manage_consumptions(user):
     df = load_consumptions(user)
@@ -143,7 +142,6 @@ def manage_consumptions(user):
         cols[3].write(f"{row['Alcool en grammes']:.1f} g")
         if cols[4].button("❌", key=f"delete_{row['index']}"):
             delete_consumption(user, row['index'])
-            st.experimental_rerun()
 
 def delete_consumption(user, index_to_delete):
     df = load_consumptions(user)
