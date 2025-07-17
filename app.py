@@ -16,8 +16,7 @@ def main():
 
             # Chargement des données une seule fois
             with st.spinner("Chargement des consommations..."):
-                df_user = load_consumptions(selected_user)            
-                add_consumption(selected_user, df_user)
+                add_consumption(selected_user)
         else:
             st.warning("Ajoutez un utilisateur avant de pouvoir enregistrer une consommation.")
     
