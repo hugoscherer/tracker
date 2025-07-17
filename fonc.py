@@ -1,12 +1,10 @@
-# helpers/utils.py
-
+import streamlit as st
 import pandas as pd
 from google_sheets_utils import authenticate_gsheets, get_worksheet
 from gspread_dataframe import get_as_dataframe
 from users import load_users
 
-# Chargement des consommations
-
+@st.cache_data(ttl=3600)  # cache 1h, à ajuster si tu veux
 def load_all_data():
     """Charge toutes les consommations de tous les utilisateurs."""
     SHEET = authenticate_gsheets()

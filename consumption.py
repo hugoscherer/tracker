@@ -3,26 +3,11 @@ import pandas as pd
 from google_sheets_utils import authenticate_gsheets, get_worksheet
 from datetime import datetime
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
-from users import *
-import time
 
 # Authentification Google Sheets
 SHEET = authenticate_gsheets()
 
-@st.cache_data(ttl=600)
-def load_consumptions(user):
-    worksheet = get_worksheet(SHEET, user)
-    df = get_as_dataframe(worksheet).dropna(how='all') if worksheet else pd.DataFrame(columns=[
-        "Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"
-    ])
-
-    for col in ["Type", "Boisson", "Taille"]:
-        if col in df.columns:
-            df[col] = df[col].astype(str)
-
-    return df
-
-# 🔍 Données des boissons prédéfinies avec leur degré d'alcool
+# Données boissons et tailles (inchangées)
 DRINKS_DATA = {
     "🍺 Bière": {
         "Affligem": 6.7, "Bête": 8.0, "1664": 5.5, "Chouffe": 8.0,
@@ -59,8 +44,29 @@ GLASS_SIZES = {
     }
 }
 
-# Ajouter une consommation
-def add_consumption(user, df):
+def load_consumptions(user):
+    key = f"consumptions_{user}"
+    if key not in st.session_state:
+        worksheet = get_worksheet(SHEET, user)
+        if worksheet is None:
+            st.session_state[key] = pd.DataFrame(columns=[
+                "Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"
+            ])
+        else:
+            df = get_as_dataframe(worksheet).dropna(how='all')
+            st.session_state[key] = df
+    return st.session_state[key]
+
+def save_consumptions(user):
+    key = f"consumptions_{user}"
+    worksheet = get_worksheet(SHEET, user)
+    df = st.session_state.get(key)
+    if worksheet and df is not None:
+        worksheet.clear()
+        set_with_dataframe(worksheet, df)
+
+def add_consumption(user):
+    df = load_consumptions(user)
     st.title(f"🍻 Ajouter une consommation pour {user}")
 
     date = st.date_input("📅 Sélectionnez la date", datetime.today())
@@ -91,19 +97,24 @@ def add_consumption(user, df):
     st.write(f"🍸 Alcool pur : {alcool_grams:.2f} g")
 
     if st.button("💾 Enregistrer la consommation"):
-        worksheet = get_worksheet(SHEET, user)
-        new_data = pd.DataFrame([[date.strftime('%Y-%m-%d'), type_boisson, boisson, degree, taille, quantite, alcool_grams, total_volume]],
-                                columns=["Date", "Type", "Boisson", "Degré d'alcool", "Taille", "Quantité", "Alcool en grammes", "Volume en litres"])
-
-        updated_df = pd.concat([df, new_data], ignore_index=True)
-        set_with_dataframe(worksheet, updated_df)
-
-        st.cache_data.clear()
+        new_data = {
+            "Date": date.strftime('%Y-%m-%d'),
+            "Type": type_boisson,
+            "Boisson": boisson,
+            "Degré d'alcool": degree,
+            "Taille": taille,
+            "Quantité": quantite,
+            "Alcool en grammes": alcool_grams,
+            "Volume en litres": total_volume
+        }
+        updated_df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+        st.session_state[f"consumptions_{user}"] = updated_df
+        save_consumptions(user)
         st.success(f"✅ {quantite} x {taille} de {boisson} ajouté ({alcool_grams:.2f} g) !")
-        st.rerun()
+        st.experimental_rerun()
 
-# Gérer les consommations
-def manage_consumptions(user, df):
+def manage_consumptions(user):
+    df = load_consumptions(user)
     st.title("🗑️ Gestion des consommations")
 
     if df.empty:
@@ -128,27 +139,10 @@ def manage_consumptions(user, df):
         cols[2].write(f"{row['Taille']} x{int(row['Quantité'])}")
         cols[3].write(f"{row['Alcool en grammes']:.1f} g")
         if cols[4].button("❌", key=f"delete_{row['index']}"):
-            delete_consumption(user, row['index'])
-            st.rerun()
-
-# Suppression d'une ligne
-def delete_consumption(user, row_index):
-    worksheet = get_worksheet(SHEET, user)
-    if worksheet is None:
-        st.error(f"❌ Impossible d'accéder à la feuille de {user}.")
-        return
-
-    df = load_consumptions(user)
-    if df.empty:
-        st.warning("⚠️ Aucune donnée trouvée.")
-        return
-
-    if row_index in df.index:
-        df = df.drop(row_index).reset_index(drop=True)
-        worksheet.clear()
-        set_with_dataframe(worksheet, df)
-        st.cache_data.clear()
-        st.success("✅ Consommation supprimée avec succès !")
-        st.rerun()
-    else:
-        st.warning(f"⚠️ Ligne {row_index} introuvable.")
+            df = load_consumptions(user)
+            if row['index'] in df.index:
+                df = df.drop(row['index']).reset_index(drop=True)
+                st.session_state[f"consumptions_{user}"] = df
+                save_consumptions(user)
+                st.success("✅ Consommation supprimée avec succès !")
+                st.experimental_rerun()
