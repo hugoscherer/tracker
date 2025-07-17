@@ -114,7 +114,7 @@ def add_consumption(user):
 
         # Message avec détails ajoutés
         st.success(
-            f"✅ Consommation ajoutée : {quantite} x {taille} de {boisson} ({type_boisson}), {degree}% d'alcool, le {date.strftime('%Y-%m-%d')}."
+            f"✅ Consommation ajoutée : {quantite} x {taille} de {boisson} ({type_boisson}) le {date.strftime('%Y-%m-%d')}."
         )
 
 def manage_consumptions(user):
@@ -155,5 +155,5 @@ def delete_consumption(user, index_to_delete):
 
         # Message avec détails supprimés
         st.success(
-            f"🗑️ Consommation supprimée : {int(row['Quantité'])} x {row['Taille']} de {row['Boisson']} ({row['Type']}), {row['Degré d\'alcool']}% d'alcool, du {row['Date']}."
+            f"🗑️ Consommation supprimée (lors de la prochaine actualisation) : {int(row['Quantité'])} x {row['Taille']} de {row['Boisson']} ({row['Type']}) du {row['Date']}."
         )
