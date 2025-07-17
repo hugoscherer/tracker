@@ -26,8 +26,7 @@ def main():
             if USERS_LIST:
                 selected_user = st.selectbox("👤 Sélectionnez un utilisateur", USERS_LIST)
                 with st.spinner("Chargement des consommations..."):
-                    df_user = load_consumptions(selected_user)
-                    manage_consumptions(selected_user, df_user)
+                    manage_consumptions(selected_user)
             else:
                 st.warning("Ajoutez un utilisateur avant de pouvoir gérer les consommations.")
 
