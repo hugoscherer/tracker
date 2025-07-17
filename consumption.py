@@ -157,4 +157,3 @@ def delete_consumption(user, index_to_delete):
         st.success(
             f"🗑️ Consommation supprimée : {int(row['Quantité'])} x {row['Taille']} de {row['Boisson']} ({row['Type']}), {row['Degré d\'alcool']}% d'alcool, du {row['Date']}."
         )
-        st.experimental_rerun()  # Forcer rerun pour mise à jour immédiate
