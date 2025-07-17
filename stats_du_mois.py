@@ -12,20 +12,40 @@ def stats_du_mois():
     st.title("📅 Stats du Mois")
 
     # Chargement des données
-
     df = load_all_data()
     if df.empty:
         st.warning("Aucune donnée disponible.")
         st.stop()
 
-    # Préparation des données
-    month = datetime.today().month
-    year = datetime.today().year
     df["Date"] = pd.to_datetime(df["Date"])
+
+    # Sélection du mois et de l'année
+    today = datetime.today()
+    mois_par_defaut = today.month
+
+    col_mois, col_annee = st.columns(2)
+    with col_mois:
+        mois_selectionne = st.selectbox(
+            "Choisir un mois",
+            options=list(range(1, 13)),
+            index=mois_par_defaut - 1,
+            format_func=lambda x: datetime(1900, x, 1).strftime('%B')
+        )
+
+    with col_annee:
+        annee_selectionnee = st.selectbox(
+            "Choisir une année",
+            options=sorted(df["Date"].dt.year.unique(), reverse=True),
+            index=0
+        )
+
+    month = mois_selectionne
+    year = annee_selectionnee
+
     df_month = df[(df["Date"].dt.month == month) & (df["Date"].dt.year == year)]
 
     if df_month.empty:
-        st.info("Aucune consommation ce mois-ci.")
+        st.info("Aucune consommation pour cette période.")
         st.stop()
 
     # 🥇 Podium du mois
@@ -78,44 +98,23 @@ def stats_du_mois():
             st.write(f"{leader_hard.iloc[0]['Utilisateur']} ({leader_hard.iloc[0]['Volume en litres']:.2f} L)")
 
     # 📈 Évolution cumulée (mois en cours, avec jours à 0)
+    st.subheader("📈 Évolution cumulée")
 
-    st.subheader("📈 Évolution cumulée (mois en cours)")
+    debut_mois = pd.Timestamp(year, month, 1)
+    fin_mois = pd.Timestamp(year, month, 28) + pd.offsets.MonthEnd(0)
+    dates_mois = pd.date_range(start=debut_mois, end=fin_mois)
 
-    # Convertir la colonne Date
-    df["Date"] = pd.to_datetime(df["Date"])
-
-    # Définir le mois et l’année en cours
-    aujourd_hui = pd.to_datetime("today")
-    mois_en_cours = aujourd_hui.month
-    annee_en_cours = aujourd_hui.year
-
-    # Filtrer les données du mois en cours
-    df_mois = df[(df["Date"].dt.month == mois_en_cours) & (df["Date"].dt.year == annee_en_cours)]
-
-    # Lister les utilisateurs
     utilisateurs = df["Utilisateur"].unique()
+    df_mois = df[(df["Date"].dt.month == month) & (df["Date"].dt.year == year)]
 
-    # Générer toutes les dates du mois en cours
-    debut_mois = pd.Timestamp(annee_en_cours, mois_en_cours, 1)
-    # Générer toutes les dates du mois en cours jusqu'à aujourd'hui
-    debut_mois = pd.Timestamp(annee_en_cours, mois_en_cours, 1)
-    dates_mois = pd.date_range(start=debut_mois, end=aujourd_hui)
-
-    # Créer un DataFrame avec toutes les combinaisons (Utilisateur x Date)
     full_index = pd.MultiIndex.from_product([dates_mois, utilisateurs], names=["Date", "Utilisateur"])
     df_full = pd.DataFrame(index=full_index).reset_index()
 
-    # Grouper les consommations réelles
     df_grouped = df_mois.groupby(["Date", "Utilisateur"], as_index=False)["Alcool en grammes"].sum()
-
-    # Fusionner avec le full dataframe pour ajouter les jours sans conso
     df_merged = pd.merge(df_full, df_grouped, on=["Date", "Utilisateur"], how="left")
     df_merged["Alcool en grammes"] = df_merged["Alcool en grammes"].fillna(0)
-
-    # Calcul du cumul
     df_merged["Cumul Alcool"] = df_merged.groupby("Utilisateur")["Alcool en grammes"].cumsum()
 
-    # Graphe Altair
     chart_mois = alt.Chart(df_merged).mark_line(point=True).encode(
         x=alt.X("Date:T", title="Date", axis=alt.Axis(labelAngle=-90)),
         y=alt.Y("Cumul Alcool", title="Alcool en grammes cumulé"),
